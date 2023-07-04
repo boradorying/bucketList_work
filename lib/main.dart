@@ -23,28 +23,53 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   var tab = 0;
+  var inputData = TextEditingController();
+  late AppBar appBarBucketList;
+  late AppBar appBarCompleted;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('버킷리스트'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.black26,
-                Colors.white,
-              ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+  void initState() {
+    super.initState();
+    appBarBucketList = AppBar(
+      title: Text('버킷리스트'),
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.black26,
+              Colors.white,
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
         ),
       ),
-      body: tab == 0 ? BucketList() : Text('완료된 것'),
+    );
+    appBarCompleted = AppBar(
+      title: Text('be completed!'),
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.red.shade300,
+              Colors.white,
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: tab == 0 ? appBarBucketList : appBarCompleted,
+      body: tab == 0 ? BucketList() : CompletedPage(),
       bottomNavigationBar: BottomNavigationBar(
         onTap: (i) {
           setState(() {
@@ -61,7 +86,7 @@ class _MyAppState extends State<MyApp> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_bag),
-            label: '이룬 것',
+            label: '완료한 것들',
           ),
         ],
       ),
@@ -76,6 +101,7 @@ class _MyAppState extends State<MyApp> {
                   children: [
                     Text('원하는 것을 입력하세요!'),
                     TextField(
+                      controller: inputData,
                       decoration: InputDecoration(
                         labelText: "ex)해외여행 가기",
                         icon: Icon(Icons.star),
@@ -94,7 +120,7 @@ class _MyAppState extends State<MyApp> {
                             var bucketService = Provider.of<BucketService>(
                                 context,
                                 listen: false);
-                            bucketService.addBucketItem("새로운 버킷 아이템");
+                            bucketService.addBucketItem(inputData.text);
                             Navigator.pop(context);
                           },
                           child: Text('등록'),
@@ -129,15 +155,27 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class BucketList extends StatelessWidget {
-  const BucketList({Key? key});
+class BucketList extends StatefulWidget {
+  BucketList({Key? key, this.appBarCompleted}) : super(key: key);
+  final appBarCompleted;
 
+  @override
+  State<BucketList> createState() => _BucketListState();
+}
+
+class _BucketListState extends State<BucketList> {
   @override
   Widget build(BuildContext context) {
     final bucketService = Provider.of<BucketService>(context);
 
     return bucketService.isEmpty()
-        ? Center(child: Text('버킷을 만들어보세요'))
+        ? Center(
+            child: Text(
+            '버킷리스트를 작성해보세요~!',
+            style: TextStyle(
+              fontSize: 16,
+            ),
+          ))
         : ListView.builder(
             itemCount: bucketService.bucketItems.length,
             itemBuilder: (context, index) {
@@ -147,6 +185,9 @@ class BucketList extends StatelessWidget {
                 width: double.infinity,
                 child: Row(
                   children: [
+                    SizedBox(
+                      width: 8,
+                    ),
                     Text(item),
                     Expanded(
                       child: Row(
@@ -154,7 +195,9 @@ class BucketList extends StatelessWidget {
                         children: [
                           ElevatedButton(
                             onPressed: () {
-                              // 완료 버튼을 눌렀을 때의 동작
+                              setState(() {
+                                bucketService.markAsCompleted(item);
+                              });
                             },
                             style: ButtonStyle(
                               backgroundColor: MaterialStateProperty.all<Color>(
@@ -166,8 +209,44 @@ class BucketList extends StatelessWidget {
                               style: TextStyle(color: Colors.black54),
                             ),
                           ),
+                          SizedBox(
+                            width: 8,
+                          ),
                           ElevatedButton(
                             onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: Text(
+                                      '삭제확인',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    content: Text('이 버킷리스트를 삭제하시겠습니까?'),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () {
+                                            var item = bucketService
+                                                .bucketItems[index];
+                                            bucketService
+                                                .removeBucketItem(item);
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text('Delete',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text('Cancel')),
+                                    ],
+                                  );
+                                },
+                              );
+
                               // 삭제 버튼을 눌렀을 때의 동작
                             },
                             style: ButtonStyle(
@@ -188,5 +267,27 @@ class BucketList extends StatelessWidget {
               );
             },
           );
+  }
+}
+
+class CompletedPage extends StatelessWidget {
+  const CompletedPage({Key? key, this.appBarCompleted}) : super(key: key);
+  final AppBar? appBarCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: appBarCompleted,
+      body: ListView.builder(
+        itemCount: context.watch<BucketService>().completedItems.length,
+        itemBuilder: (context, index) {
+          var item = context.watch<BucketService>().completedItems[index];
+
+          return ListTile(
+            title: Text(item),
+          );
+        },
+      ),
+    );
   }
 }
