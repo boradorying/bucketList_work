@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class BucketService extends ChangeNotifier {
   List<String> bucketItems = [];
+  List<String> completedItems = [];
 
   bool isEmpty() {
     return bucketItems.isEmpty;
@@ -12,5 +14,14 @@ class BucketService extends ChangeNotifier {
     notifyListeners(); // 데이터 변경 알림
   }
 
-  // 다른 필요한 기능들을 구현할 수 있습니다.
+  removeBucketItem(a) {
+    bucketItems.remove(a);
+    notifyListeners();
+  }
+
+  markAsCompleted(a) {
+    bucketItems.remove(a);
+    completedItems.add(a);
+    notifyListeners();
+  }
 }
